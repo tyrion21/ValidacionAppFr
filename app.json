@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "validacion",
+    "slug": "validacion",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.tyrion21.validacion",
+      "jsEngine": "hermes",
+      "networkSecurityConfig": "./assets/network_security_config.xml",
+      "usesCleartextTraffic": true,
+      "allowBackup": false,
+      "hardwareAccelerated": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "./withNetworkSecurityConfig.js",
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "networkSecurityConfig": "./assets/network_security_config.xml",
+            "manifest": {
+              "application": {
+                "usesCleartextTraffic": true,
+                "android:networkSecurityConfig": "@xml/network_security_config"
+              }
+            }
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7858a098-6889-41f9-9f90-509874ae33f3"
+      }
+    }
+  }
+}
