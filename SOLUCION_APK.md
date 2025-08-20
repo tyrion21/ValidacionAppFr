@@ -47,7 +47,7 @@ npm run start:dev
 #### A. Verificar con HTTP temporalmente:
 ```javascript
 // En constantes.js - SOLO PARA TESTING
-export const API_URL = 'http://192.168.7.25:4000'
+export const API_URL = 'http://192.168.7.26:4000'
 ```
 
 #### B. Verificar logs de Android:
@@ -56,14 +56,14 @@ adb logcat | grep -i "validacion\|network\|ssl"
 ```
 
 #### C. Probar endpoint directo:
-Desde el navegador móvil: `https://192.168.7.25:4000/health`
+Desde el navegador móvil: `https://192.168.7.26:4000/health`
 
 ## 📋 Configuración Actual
 
 ### Network Security Config
 ```xml
 <domain-config cleartextTrafficPermitted="false">
-    <domain includeSubdomains="true">192.168.7.25</domain>
+    <domain includeSubdomains="true">192.168.7.26</domain>
     <trust-anchors>
         <certificates src="system"/>
         <certificates src="user"/>
@@ -73,7 +73,7 @@ Desde el navegador móvil: `https://192.168.7.25:4000/health`
 
 ### CORS Backend
 ```javascript
-origin: ['*', 'https://192.168.7.25:4000', /* otros orígenes */]
+origin: ['*', 'https://192.168.7.26:4000', /* otros orígenes */]
 ```
 
 ### Timeout Mejorado
@@ -98,7 +98,7 @@ const fetchWithTimeout = createFetchWithTimeout(15000); // 15 segundos
 ## 📱 Resultado Esperado
 
 Después de generar la nueva APK con estos cambios:
-1. La APK debería conectarse a `https://192.168.7.25:4000`
+1. La APK debería conectarse a `https://192.168.7.26:4000`
 2. El componente `ConnectionTest` debería mostrar "Conectado"
 3. Las funciones de la app deberían funcionar normalmente
 
@@ -109,7 +109,7 @@ Después de generar la nueva APK con estos cambios:
 ## 🔄 Si Persiste el Problema
 
 1. Prueba con HTTP temporalmente para aislar el problema SSL
-2. Verifica que el certificado sea válido: `openssl s_client -connect 192.168.7.25:4000`
+2. Verifica que el certificado sea válido: `openssl s_client -connect 192.168.7.26:4000`
 3. Considera usar un certificado válido (Let's Encrypt) en lugar de autofirmado
 
 ¿Necesitas ayuda con alguno de estos pasos?
