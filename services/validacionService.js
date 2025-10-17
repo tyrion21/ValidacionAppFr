@@ -175,3 +175,22 @@ export const verificarValidacion = async (folio) => {
     throw error;
   }
 };
+
+/**
+ * Verifica si un folio existe en el sistema
+ * @param {string} folio - Folio del pallet a verificar
+ * @returns Promise con la información de existencia del folio
+ */
+export const verificarExistenciaFolio = async (folio) => {
+  try {
+    const response = await fetch(`${API_URL}/existencias/verificar-folio/${folio}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Error verificando existencia del folio');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error verificando existencia de folio:', error);
+    throw error;
+  }
+};

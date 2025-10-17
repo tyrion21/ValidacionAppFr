@@ -13,7 +13,9 @@ import { hp, wp } from "../../helpers/common";
 import { API_URL } from '@/constants/constantes'
 
 const ControlPanel = () => {
+    // ESTADO GLOBAL: Usamos el contexto global normalmente
     const { selectedFrio, setSelectedFrio, selectedCamara, setSelectedCamara } = useContext(ParametersContext);
+
     const [frios, setFrios] = useState([]);
     const [date, setDate] = useState(new Date());
     const [show, setShow] = useState(false);
@@ -151,16 +153,8 @@ const ControlPanel = () => {
         }
     }, [selectedFrio]);
 
-    // Manejador del botón aceptar
+    // Manejador del botón aceptar (ya no es necesario validar aquí)
     const handleAccept = () => {
-        if (!selectedFrio || !selectedCamara) {
-            Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: 'Debe seleccionar ambas opciones: Frigorifico y Paletizado.'
-            });
-            return;
-        }
         router.push('/menu');
     };
 
@@ -191,28 +185,7 @@ const ControlPanel = () => {
                     {/* Contenedor para el Dropdown y el DateTimePicker */}
                     <View style={styles.controlsContainer}>
                         <View style={styles.dropdownContainer}>
-                            {renderLabel(selectedCamara, isFocus2)}
-                            <Dropdown
-                                style={[styles.dropdown, isFocus2 && { borderColor: 'blue' }]}
-                                placeholderStyle={styles.placeholderStyle}
-                                selectedTextStyle={styles.selectedTextStyle}
-                                inputSearchStyle={styles.inputSearchStyle}
-                                iconStyle={styles.iconStyle}
-                                data={camaras.map(camara => ({ label: camara.DES_CAM, value: camara.DES_CAM }))}
-                                search
-                                maxHeight={300}
-                                labelField="label"
-                                valueField="value"
-                                placeholder={!isFocus2 ? 'Seleccione Paletizado ' : '...'}
-                                searchPlaceholder="Buscar..."
-                                value={selectedCamara}
-                                onFocus={() => setIsFocus2(true)}
-                                onBlur={() => setIsFocus2(false)}
-                                onChange={item => {
-                                    setSelectedCamara(item.value);
-                                    setIsFocus2(false);
-                                }}
-                            />
+                            <Text style={styles.camaraReadOnly}>Paletizado: {selectedCamara || 'No seleccionado'}</Text>
                         </View>
                         <View style={styles.dateContainer}>
                             <Button onPress={showDatepicker} title="Seleccionar fecha" />
@@ -430,5 +403,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#FFFFFF', // Color claro para mejor contraste con fondo naranja
+    },
+    camaraReadOnly: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: theme.colors.primary,
+        padding: 10,
     },
 });

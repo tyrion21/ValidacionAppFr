@@ -11,8 +11,8 @@ import 'react-super-responsive-table/dist/SuperResponsiveTableStyle.css';
 import Button from "@/components/Button";
 import { ParametersContext } from "@/context/ParametersContext";
 import { hp, wp } from "@/helpers/common";
-import { API_URL } from '@/constants/constantes';
-import { verificarRechazo, actualizarRechazo, verificarValidacion } from '@/services/validacionService';
+import { API_URL, TEMPORADA } from '@/constants/constantes';
+import { verificarRechazo, actualizarRechazo, verificarValidacion, verificarExistenciaFolio } from '@/services/validacionService';
 
 const DetallePallet = () => {
 
@@ -28,6 +28,8 @@ const DetallePallet = () => {
     const [cuartel, setCuartel] = useState("");
     const [calibre, setCalibre] = useState("");
     const [cajasMix, setCajasMix] = useState("");
+    const [temporada, setTemporada] = useState("");
+    const [especieReal, setEspecieReal] = useState("");
     const [loading, setLoading] = useState(false)
     const { selectedFrio, setSelectedFrio, selectedCamara, setSelectedCamara } = useContext(ParametersContext);
     
@@ -35,7 +37,8 @@ const DetallePallet = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`${API_URL}/existencias/mixexistencias/${folio}`, {
+                // Primero intentar obtener de existencias normales (tiene Especie)
+                let response = await fetch(`${API_URL}/existencias/${folio}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -43,26 +46,44 @@ const DetallePallet = () => {
                 });
 
                 let data;
+                let isMixPallet = false;
+
+                if (response.status === 404) {
+                    // Si no está en existencias normales, buscar en mix
+                    console.log('No encontrado en existencias normales, buscando en mix...');
+                    response = await fetch(`${API_URL}/existencias/mixexistencias/${folio}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    isMixPallet = true;
+                }
+
                 const contentType = response.headers.get('content-type');
                 if (contentType && contentType.indexOf('application/json') !== -1) {
                     data = await response.json();
-                    console.log(data);
-                    
+                    console.log('Datos obtenidos:', data);
                 } else {
                     data = await response.text();
-                    console.log('text', data);
-                    
+                    console.log('Respuesta como texto:', data);
                 }
 
                 if (response.ok) {
-                    setData(data);
-                    // setCsg(data.CSG);
-                    // setVariedad(data.Variedad);
-                    // setCuartel(data.Cuartel);
-                    // setCalibre(data.Calibre);
-                    // setCajas(data.Cajas);
-                    console.log(data);
-                    
+                    // Si es mix, data es un array; si es normal, es un objeto
+                    if (isMixPallet) {
+                        setData(data);
+                        // Para pallets mix, la especie viene del parámetro o usamos un valor por defecto
+                        setEspecieReal(especie || 'MIX');
+                    } else {
+                        // Para pallets normales, convertir a array para mostrar en tabla
+                        setData([data]);
+                        // Guardar la especie del objeto
+                        setEspecieReal(data.Especie || especie || 'N/A');
+                    }
+
+                    setTemporada(TEMPORADA);
+                    console.log('Especie establecida:', data.Especie || especie);
                 } else if (response.status === 404) {
                     Toast.show({
                         type: 'error',
@@ -77,6 +98,7 @@ const DetallePallet = () => {
                     });
                 }
             } catch (error) {
+                console.error('Error en fetchData:', error);
                 Toast.show({
                     type: 'error',
                     text1: 'Error',
@@ -89,9 +111,26 @@ const DetallePallet = () => {
 
         fetchData();    }, [folio]);      const rechazarPallet = async () => {
         try {
+            // Primero verificar si el folio existe
+            const respuestaExistencia = await verificarExistenciaFolio(folio);
+
+            if (!respuestaExistencia.existe) {
+                Alert.alert(
+                    "Folio no existe",
+                    "El folio ingresado no existe en el sistema.",
+                    [
+                        {
+                            text: "Entendido",
+                            style: "default"
+                        }
+                    ]
+                );
+                return;
+            }
+
             // Verificar si el pallet ya ha sido validado
             const respuestaValidacion = await verificarValidacion(folio);
-            
+
             if (respuestaValidacion.data && respuestaValidacion.data.validado) {
                 // Si está validado, mostrar un mensaje de error
                 Alert.alert(
@@ -109,15 +148,26 @@ const DetallePallet = () => {
             
             // Si no está validado, proceder con el rechazo
             console.log('Enviando a rechazo con packing:', selectedFrio);
-            
+
+            // Calcular el total de cajas desde los datos de la tabla
+            let totalCajas = 0;
+            if (data && data.length > 0) {
+                totalCajas = data.reduce((sum, item) => sum + (item.Cajas || 0), 0);
+            } else if (cajas) {
+                totalCajas = parseInt(cajas, 10) || 0;
+            }
+
+            console.log('Total de cajas calculado para rechazo:', totalCajas);
+
             // Asegurarnos de que todos los parámetros tengan valores válidos
             router.push({
                 pathname: '/menu/tabs/RechazoPallet',
-                params: { 
+                params: {
                     folio: folio || '',
-                    especie: especie || '',
-                    cajas: cajas ? cajas.toString() : '0',
-                    camara: selectedCamara || '', 
+                    especie: especieReal || 'N/A',
+                    cajas: totalCajas.toString(),
+                    temporada: TEMPORADA,
+                    camara: selectedCamara || '',
                     packing: selectedFrio || '' // Usar el valor de selectedFrio como packing
                 }
             });
@@ -167,16 +217,43 @@ const DetallePallet = () => {
     }
 
     const realizarValidacion = async (esRechazoAprobado) => {
-        const data = {
+        setLoading(true);
+
+        // Calcular el total de cajas desde los datos de la tabla
+        let totalCajas = 0;
+        if (data && data.length > 0) {
+            totalCajas = data.reduce((sum, item) => sum + (item.Cajas || 0), 0);
+        } else if (cajas) {
+            totalCajas = parseInt(cajas, 10) || 0;
+        }
+
+        // Validar que tengamos cajas
+        if (totalCajas === 0) {
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'No se puede validar: número de cajas inválido',
+                position: 'top',
+                visibilityTime: 2000,
+                autoHide: true,
+            });
+            setLoading(false);
+            return;
+        }
+
+        const dataToSend = {
             Folio: folio,
-            Especie: especie,
+            Especie: especieReal || 'N/A',
             Estado: true,
+            Temporada: TEMPORADA,
             Camara: selectedCamara,
             Usuario: 'jason',
             Packing: selectedFrio,
-            Cajas: parseInt(cajas, 10),
+            Cajas: totalCajas,
         };
-        
+
+        console.log('Datos de validación a enviar:', dataToSend);
+
         try {
             // Si el pallet estaba rechazado y se aprueba, actualizar su estado primero
             if (esRechazoAprobado) {
@@ -195,16 +272,18 @@ const DetallePallet = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify(dataToSend),
             });
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
 
             const responseData = await response.json();
             console.log('Response:', responseData);
             console.log('Status:', response.status);
+
+            if (!response.ok) {
+                // Extraer el mensaje de error del servidor
+                const errorMessage = responseData.message || 'Error en la validación';
+                throw new Error(errorMessage);
+            }
             
 
             if (responseData.message == 'Folio ya fue validado'){
@@ -246,6 +325,8 @@ const DetallePallet = () => {
                 visibilityTime: 2000,
                 autoHide: true,
             });
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -267,6 +348,7 @@ const DetallePallet = () => {
                     <Text style={styles.welcomeText}>Folio: {folio}</Text>
                     <View style={styles.tableContainer}>
                         <Text style={styles.title}>Detalle de Pallet</Text>
+                        <Text style={styles.subtitle}>Especie: {especieReal || 'N/A'}</Text>
                         <View style={styles.table}>
                             <View style={styles.tableRow}>
                                 <Text style={styles.tableHeader}>CSG</Text>
@@ -277,11 +359,11 @@ const DetallePallet = () => {
                             </View>
                             {data.map((item, index) => (
                                 <View key={index} style={styles.tableRow}>
-                                    <Text style={styles.tableCell}>{item.CSG}</Text>
-                                    <Text style={styles.tableCell}>{item.Variedad}</Text>
-                                    <Text style={styles.tableCell}>{item.Cuartel}</Text>
-                                    <Text style={styles.tableCell}>{item.Calibre}</Text>
-                                    <Text style={styles.tableCell}>{item.Cajas}</Text>
+                                    <Text style={styles.tableCell}>{item.CSG || 'N/A'}</Text>
+                                    <Text style={styles.tableCell}>{item.Variedad || 'N/A'}</Text>
+                                    <Text style={styles.tableCell}>{item.Cuartel || 'N/A'}</Text>
+                                    <Text style={styles.tableCell}>{item.Calibre || 'N/A'}</Text>
+                                    <Text style={styles.tableCell}>{item.Cajas || 0}</Text>
                                 </View>
                             ))}
                         </View>
@@ -334,7 +416,13 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 20,
+        marginBottom: 10,
+    },
+    subtitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 15,
+        color: theme.colors.primary,
     },
     table: {
         width: '100%',

@@ -13,7 +13,9 @@ import { hp, wp } from "../../helpers/common";
 import { API_URL } from '@/constants/constantes'
 
 const Report = () => {
+    // ESTADO GLOBAL: Usamos el contexto global normalmente
     const { selectedFrio, setSelectedFrio, selectedCamara, setSelectedCamara } = useContext(ParametersContext);
+
     const [date, setDate] = useState(new Date());
     const [show, setShow] = useState(false);
     const [camaras, setCamaras] = useState([]);
@@ -44,24 +46,24 @@ const Report = () => {
             if (!selectedCamara || !date) {
                 return;
             }
-            
+
             setIsLoadingPallets(true);
             const fechaFormateada = formatDate(date);
-            
+
             // Construir URL para obtener informe diario
             const informeUrl = `${API_URL}/validacion/informe-diario?fecha=${encodeURIComponent(fechaFormateada)}`;
-            
+
             console.log('Consultando datos de informe diario con fecha:', fechaFormateada);
-            
+
             const response = await fetch(informeUrl);
             const result = await response.json();
-            
+
             if (result.success && result.data) {
                 // Filtrar por cámara seleccionada si es necesario
-                const filteredData = selectedCamara 
+                const filteredData = selectedCamara
                     ? result.data.filter(item => item.LINEA?.includes(selectedCamara) || item.Camara === selectedCamara)
                     : result.data;
-                
+
                 setPalletData(filteredData);
             } else {
                 setPalletData([]);
@@ -124,27 +126,7 @@ const Report = () => {
                     {/* Contenedor para el Dropdown y el DateTimePicker */}
                     <View style={styles.controlsContainer}>
                         <View style={styles.dropdownContainer}>
-                            <Dropdown
-                                style={[styles.dropdown, isFocus2 && { borderColor: 'blue' }]}
-                                placeholderStyle={styles.placeholderStyle}
-                                selectedTextStyle={styles.selectedTextStyle}
-                                inputSearchStyle={styles.inputSearchStyle}
-                                iconStyle={styles.iconStyle}
-                                data={camaras.map(camara => ({ label: camara.DES_CAM, value: camara.DES_CAM }))}
-                                search
-                                maxHeight={300}
-                                labelField="label"
-                                valueField="value"
-                                placeholder={!isFocus2 ? 'Seleccione Paletizado ' : '...'}
-                                searchPlaceholder="Buscar..."
-                                value={selectedCamara}
-                                onFocus={() => setIsFocus2(true)}
-                                onBlur={() => setIsFocus2(false)}
-                                onChange={item => {
-                                    setSelectedCamara(item.value);
-                                    setIsFocus2(false);
-                                }}
-                            />
+                            <Text style={styles.camaraReadOnly}>Paletizado: {selectedCamara || 'No seleccionado'}</Text>
                         </View>
                         <View style={styles.dateContainer}>
                             <Button onPress={showDatepicker} title="Seleccionar fecha" />
@@ -427,5 +409,11 @@ const styles = StyleSheet.create({
     },
     estadoRechazadoText: {
         color: 'white', // Texto blanco para el estado rechazado
+    },
+    camaraReadOnly: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: theme.colors.primary,
+        padding: 10,
     },
 });

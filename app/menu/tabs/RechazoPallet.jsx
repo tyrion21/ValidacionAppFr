@@ -10,7 +10,7 @@ import Toast from 'react-native-toast-message';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { theme } from "@/constants/theme";
 import { hp, wp } from "@/helpers/common";
-import { API_URL } from '@/constants/constantes'
+import { API_URL, TEMPORADA } from '@/constants/constantes'
 import { getMotivosRechazo, rechazarPallet } from '@/services/validacionService';
 
 // Custom Checkbox Component
@@ -41,13 +41,16 @@ const RechazoPallet = () => {
   console.log('RechazoPallet - route.params:', route.params);
   
   // Desestructurar con valores por defecto para evitar undefined
-  const { 
-    folio = '', 
-    especie = '', 
-    cajas = 0, 
-    camara = '', 
-    packing = '' 
+  const {
+    folio = '',
+    especie = '',
+    cajas = 0,
+    camara = '',
+    packing = ''
   } = route.params || {};
+
+  // Usar la constante TEMPORADA en lugar del parámetro
+  const temporada = TEMPORADA;
   
   // Log para verificar los parámetros recibidos
   console.log('RechazoPallet - Parámetros procesados:', { folio, especie, cajas, camara, packing });
@@ -160,6 +163,7 @@ const RechazoPallet = () => {
         Usuario: 'jason', // Reemplazar con usuario real cuando esté disponible
         Especie: especie,
         Cajas: cajas ? parseInt(cajas, 10) : 0, // Asegurar que cajas sea número
+        Temporada: TEMPORADA,
         Camara: camara || '',
         Packing: packing || ''
       };
