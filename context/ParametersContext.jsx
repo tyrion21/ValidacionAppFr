@@ -7,19 +7,23 @@ export const ParametersContext = createContext();
 export const ParametersProvider = ({ children }) => {
     const [selectedFrio, setSelectedFrio] = useState('');
     const [selectedCamara, setSelectedCamara] = useState('');
-    
+    const [loggedUser, setLoggedUser] = useState('');
+
     // Función para reiniciar el contexto
     const resetParameters = () => {
         setSelectedFrio('');
         setSelectedCamara('');
+        setLoggedUser('');
     };
 
     return (
-        <ParametersContext.Provider value={{ 
-            selectedFrio, 
-            setSelectedFrio, 
-            selectedCamara, 
+        <ParametersContext.Provider value={{
+            selectedFrio,
+            setSelectedFrio,
+            selectedCamara,
             setSelectedCamara,
+            loggedUser,
+            setLoggedUser,
             resetParameters
         }}>
             {children}

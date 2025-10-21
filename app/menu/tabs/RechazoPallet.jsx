@@ -1,6 +1,6 @@
 // filepath: c:\validacionApp\app\menu\tabs\RechazoPallet.jsx
 import { StyleSheet, Text, View, StatusBar, Platform, KeyboardAvoidingView, TouchableOpacity } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { useRouter } from "expo-router";
 import { useRoute } from '@react-navigation/native';
 import ScreenWrapper from "@/components/ScreenWrapper";
@@ -12,6 +12,7 @@ import { theme } from "@/constants/theme";
 import { hp, wp } from "@/helpers/common";
 import { API_URL, TEMPORADA } from '@/constants/constantes'
 import { getMotivosRechazo, rechazarPallet } from '@/services/validacionService';
+import { ParametersContext } from '@/context/ParametersContext';
 
 // Custom Checkbox Component
 const CustomCheckbox = ({ checked, onToggle, label }) => {
@@ -32,14 +33,15 @@ const CustomCheckbox = ({ checked, onToggle, label }) => {
   );
 };
 
-const RechazoPallet = () => {  
+const RechazoPallet = () => {
   const router = useRouter();
   const route = useRoute();
-  
+  const { loggedUser } = useContext(ParametersContext);
+
   // Verificar que route.params exista antes de desestructurar
   console.log('RechazoPallet - route:', route);
   console.log('RechazoPallet - route.params:', route.params);
-  
+
   // Desestructurar con valores por defecto para evitar undefined
   const {
     folio = '',
@@ -51,10 +53,10 @@ const RechazoPallet = () => {
 
   // Usar la constante TEMPORADA en lugar del parámetro
   const temporada = TEMPORADA;
-  
+
   // Log para verificar los parámetros recibidos
   console.log('RechazoPallet - Parámetros procesados:', { folio, especie, cajas, camara, packing });
-  
+
   const [loading, setLoading] = useState(false);
   const [reasonsList, setReasonsList] = useState([]);
   const [loadingReasons, setLoadingReasons] = useState(true);
@@ -160,7 +162,7 @@ const RechazoPallet = () => {
       const rechazoData = {
         Folio: folio,
         Motivos: selectedReasons,
-        Usuario: 'jason', // Reemplazar con usuario real cuando esté disponible
+        Usuario: loggedUser || 'desconocido',
         Especie: especie,
         Cajas: cajas ? parseInt(cajas, 10) : 0, // Asegurar que cajas sea número
         Temporada: TEMPORADA,

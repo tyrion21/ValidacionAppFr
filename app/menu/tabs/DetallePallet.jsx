@@ -31,36 +31,52 @@ const DetallePallet = () => {
     const [temporada, setTemporada] = useState("");
     const [especieReal, setEspecieReal] = useState("");
     const [loading, setLoading] = useState(false)
-    const { selectedFrio, setSelectedFrio, selectedCamara, setSelectedCamara } = useContext(ParametersContext);
+    const { selectedFrio, selectedCamara, loggedUser } = useContext(ParametersContext);
     
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Primero intentar obtener de existencias normales (tiene Especie)
-                let response = await fetch(`${API_URL}/existencias/${folio}`, {
+                // Primero verificar en qué tabla está el folio
+                const verificarResponse = await fetch(`${API_URL}/existencias/verificar-folio/${folio}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                 });
 
-                let data;
-                let isMixPallet = false;
+                const verificarData = await verificarResponse.json();
+                console.log('Verificación de folio:', verificarData);
 
-                if (response.status === 404) {
-                    // Si no está en existencias normales, buscar en mix
-                    console.log('No encontrado en existencias normales, buscando en mix...');
-                    response = await fetch(`${API_URL}/existencias/mixexistencias/${folio}`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                if (!verificarData.existe) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: 'Folio no encontrado'
                     });
-                    isMixPallet = true;
+                    setLoading(false);
+                    return;
                 }
 
+                // Determinar qué endpoint usar según el tipo
+                const isMixPallet = verificarData.tipo === 'mix';
+                const endpoint = isMixPallet
+                    ? `${API_URL}/existencias/mixexistencias/${folio}`
+                    : `${API_URL}/existencias/${folio}`;
+
+                console.log(`Folio es tipo ${verificarData.tipo}, usando endpoint: ${endpoint}`);
+
+                // Obtener los datos del endpoint correspondiente
+                const response = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
                 const contentType = response.headers.get('content-type');
+                let data;
+
                 if (contentType && contentType.indexOf('application/json') !== -1) {
                     data = await response.json();
                     console.log('Datos obtenidos:', data);
@@ -73,8 +89,8 @@ const DetallePallet = () => {
                     // Si es mix, data es un array; si es normal, es un objeto
                     if (isMixPallet) {
                         setData(data);
-                        // Para pallets mix, la especie viene del parámetro o usamos un valor por defecto
-                        setEspecieReal(especie || 'MIX');
+                        // Para pallets mix, la especie viene del parámetro (desde menú validación)
+                        setEspecieReal(especie || 'N/A');
                     } else {
                         // Para pallets normales, convertir a array para mostrar en tabla
                         setData([data]);
@@ -83,13 +99,7 @@ const DetallePallet = () => {
                     }
 
                     setTemporada(TEMPORADA);
-                    console.log('Especie establecida:', data.Especie || especie);
-                } else if (response.status === 404) {
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Error',
-                        text2: 'Folio no encontrado'
-                    });
+                    console.log('Especie establecida:', isMixPallet ? especie : (data.Especie || especie));
                 } else {
                     Toast.show({
                         type: 'error',
@@ -247,7 +257,7 @@ const DetallePallet = () => {
             Estado: true,
             Temporada: TEMPORADA,
             Camara: selectedCamara,
-            Usuario: 'jason',
+            Usuario: loggedUser || 'desconocido',
             Packing: selectedFrio,
             Cajas: totalCajas,
         };

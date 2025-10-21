@@ -27,6 +27,7 @@ const validacion = () => {
     const [cajas, setCajas] = useState("");
     const [especie, setEspecie] = useState("");
     const [loading, setLoading] = useState(false);
+    const [datosVinculados, setDatosVinculados] = useState(false); // Controla si se mostraron los datos
     const { selectedFrio, setSelectedFrio, selectedCamara, setSelectedCamara } = useContext(ParametersContext);
 
 
@@ -39,6 +40,7 @@ const validacion = () => {
         setCalibre("");
         setCajas("");
         setEspecie("");
+        setDatosVinculados(false);
     };
 
     useEffect(() => {
@@ -104,7 +106,44 @@ const validacion = () => {
                 throw new Error('Error al validar el folio');
             }
             console.log(folioRef.current); // Asegúrate de que folioRef.current tenga el valor correcto
-            const response = await fetch(`${API_URL}/existencias/${folioRef.current}`, {
+
+            // Primero verificar qué tipo de folio es (normal o mix)
+            const verificarResponse = await fetch(`${API_URL}/existencias/verificar-folio/${folioRef.current}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!verificarResponse.ok) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Error al verificar el folio'
+                });
+                setLoading(false);
+                return;
+            }
+
+            const verificarData = await verificarResponse.json();
+            console.log('Verificación de folio:', verificarData);
+
+            if (!verificarData.existe) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Folio no encontrado'
+                });
+                setLoading(false);
+                return;
+            }
+
+            // Llamar al endpoint correcto según el tipo
+            const endpoint = verificarData.tipo === 'mix'
+                ? `${API_URL}/existencias/${folioRef.current}` // Para mix, usar normal para obtener Especie
+                : `${API_URL}/existencias/${folioRef.current}`;
+
+            const response = await fetch(endpoint, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -122,16 +161,28 @@ const validacion = () => {
 
             if (response.ok) {
                 console.log('Data:', data);
-                setExportadora(data.Exportadora);
-                setEmbalaje(data.Embalaje);
-                setEtiqueta(data.Marca);
-                setCategoria(data.Categoria);
-                setCalibre(data.Calibre);
-                setCajas(data.Cajas);
-                setEspecie(data.Especie);
+
+                // Si es un array (mix), tomar el primer elemento para obtener datos generales
+                const dataObj = Array.isArray(data) ? data[0] : data;
+
+                setExportadora(dataObj.Exportadora || 'N/A');
+                setEmbalaje(dataObj.Embalaje || 'N/A');
+                setEtiqueta(dataObj.Marca || dataObj.Etiqueta || 'N/A');
+                setCategoria(dataObj.Categoria || 'N/A');
+                setCalibre(dataObj.Calibre || 'N/A');
+
+                // Para cajas, si es mix sumar todas las cajas del array
+                if (Array.isArray(data)) {
+                    const totalCajas = data.reduce((sum, item) => sum + (item.Cajas || 0), 0);
+                    setCajas(totalCajas);
+                } else {
+                    setCajas(dataObj.Cajas || 0);
+                }
+
+                setEspecie(dataObj.Especie || 'N/A');
+                setDatosVinculados(true); // Habilitar el botón "Detalle Pallet"
 
             } else if (response.status === 404) {
-                // console.error('Error:', data);
                 Toast.show({
                     type: 'error',
                     text1: 'Error',
@@ -139,7 +190,6 @@ const validacion = () => {
                 });
             }
             else {
-                // console.error('Error:', data);
                 Toast.show({
                     type: 'error',
                     text1: 'Error',
@@ -230,8 +280,11 @@ const validacion = () => {
                         />
                         <View style={styles.buttonContainer}>
                             <Button title="Mostrar" loading={loading} onPress={onSubmit} buttonStyle={[styles.buttonPadding]} />
-                            <Button title="Detalle Pallet" buttonStyle={[styles.blueButton, styles.buttonPadding]} 
-                                    onPress={() => router.push({ pathname: 'menu/tabs/DetallePallet', params: { folio: folioRef.current, especie, cajas } })} />
+                            <Button
+                                title="Detalle Pallet"
+                                buttonStyle={[styles.blueButton, styles.buttonPadding, !datosVinculados && styles.disabledButton]}
+                                onPress={() => router.push({ pathname: 'menu/tabs/DetallePallet', params: { folio: folioRef.current, especie, cajas } })}
+                                disabled={!datosVinculados} />
                         </View>
                     </View>
                 </KeyboardAwareScrollView>
@@ -296,6 +349,10 @@ const styles = StyleSheet.create({
     },
     blueButton: {
         backgroundColor: 'blue'
+    },
+    disabledButton: {
+        backgroundColor: '#cccccc',
+        opacity: 0.6
     },
     buttonPadding: {
         paddingVertical: 10,

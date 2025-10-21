@@ -1,7 +1,7 @@
 import { StyleSheet, View, Text, StatusBar, Image, Platform, KeyboardAvoidingView } from "react-native";
 import Toast from 'react-native-toast-message';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useContext } from "react";
 import { useRouter } from "expo-router";
 import ScreenWrapper from "../components/ScreenWrapper";
 import { theme } from "../constants/theme";
@@ -11,6 +11,7 @@ import Icon from '../assets/icons';
 import Input from "../components/Input";
 import { hp, wp } from "../helpers/common";
 import  { API_URL } from '../constants/constantes'
+import { ParametersContext } from "../context/ParametersContext";
 
 const Login = () => {
 
@@ -18,6 +19,7 @@ const Login = () => {
     const userRef = useRef("")
     const passwordRef = useRef("")
     const [loading, setLoading] = useState(false)
+    const { setLoggedUser } = useContext(ParametersContext);
 
     const onSubmit = async () => {
 
@@ -55,6 +57,8 @@ const Login = () => {
             if (response.ok) {
                 // Manejar la respuesta exitosa
                 console.log('Login successful:', data);
+                // Guardar el usuario en el contexto
+                setLoggedUser(userRef.current);
                 // Toast.show({ type: 'success', text1: 'Exito', text2: 'Exito al iniciar sesión' });
                 // Redirigir a otra pantalla o actualizar el estado de la aplicación
                 router.push('/parameters');

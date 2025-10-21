@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, StatusBar, Platform, KeyboardAvoidingView, TouchableOpacity } from 'react-native'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { useRouter } from "expo-router";
 import { useRoute } from '@react-navigation/native';
 import ScreenWrapper from "@/components/ScreenWrapper";
@@ -10,6 +10,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { theme } from "@/constants/theme";
 import { hp, wp } from "@/helpers/common";
 import { API_URL } from '@/constants/constantes'
+import { ParametersContext } from '@/context/ParametersContext';
 
 // Custom Checkbox Component
 const CustomCheckbox = ({ checked, onToggle, label }) => {
@@ -34,6 +35,7 @@ const RechazoPallet = () => {
   const router = useRouter();
   const route = useRoute();
   const { folio, especie, cajas } = route.params;
+  const { loggedUser } = useContext(ParametersContext);
   const [loading, setLoading] = useState(false);
   const [reasonsList, setReasonsList] = useState([]);
   const [loadingReasons, setLoadingReasons] = useState(true);
@@ -131,7 +133,7 @@ const RechazoPallet = () => {
         body: JSON.stringify({
           Folio: folio,
           Motivos: selectedReasons,
-          Usuario: 'jason', // Replace with actual user
+          Usuario: loggedUser || 'desconocido',
         }),
       });
 
